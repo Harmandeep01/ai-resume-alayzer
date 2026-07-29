@@ -1,6 +1,9 @@
 import re
 import spacy
+
 from app.models import ResumeData
+from app.data.skills import SKILLS
+from app.services.ai_service import extract_resume_with_ai
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -72,146 +75,31 @@ def extract_phone_number(text):
 
 
 def extract_resume_information(text: str) -> ResumeData:
+    ai_resume = extract_resume_with_ai(text)
+    email = extract_email(text)
+    phone = extract_phone_number(text)
+
+    print(f"Deterministic Email: {email}")
+    print(f"Deterministic Phone: {phone}")
+
     return ResumeData(
-        name=extract_name(text),
-        email=extract_email(text),
-        phone=extract_phone_number(text)
-    )
+    name=ai_resume.name,
+    email=email or ai_resume.email,
+    phone=phone or ai_resume.phone,
+    skills=ai_resume.skills,
+    education=ai_resume.education,
+    experience=ai_resume.experience,
+    projects=ai_resume.projects,
+)
 
-def clean_text(text: str) -> str:
-    return " ".join(text.split())
+def extract_resume_skills(text: str) -> list[str]:
+    text_lower = text.lower()
 
+    found_skills = []
 
-def get_header(text: str) -> str:
-    """
-    Use only first 8 non-empty lines.
-    Most resumes contain the name here.
-    """
-    lines = [
-        line.strip()
-        for line in text.splitlines()
-        if line.strip()
-    ]
+    for skill in SKILLS:
 
-    return "\n".join(lines[:8])
+        if skill.lower() in text_lower:
+            found_skills.append(skill)
 
-
-def score_candidate(candidate: str, header: str) -> int:
-
-    score = 0
-
-    candidate = clean_text(candidate)
-
-    words = candidate.split()
-
-    # ----------------------------------
-    # Position
-    # ----------------------------------
-
-    if candidate in header:
-        score += 10
-
-    # ----------------------------------
-    # Word Count
-    # ----------------------------------
-
-    if 1 <= len(words) <= 3:
-        score += 5
-    else:
-        score -= 10
-
-    # ----------------------------------
-    # Numbers
-    # ----------------------------------
-
-    if any(ch.isdigit() for ch in candidate):
-        score -= 20
-
-    # ----------------------------------
-    # Email
-    # ----------------------------------
-
-    if "@" in candidate:
-        score -= 20
-
-    # ----------------------------------
-    # Alphabetic
-    # ----------------------------------
-
-    if all(word.replace(".", "").isalpha() for word in words):
-        score += 5
-
-    # ----------------------------------
-    # Tech Stack
-    # ----------------------------------
-
-    for word in words:
-        if word.upper() in {w.upper() for w in TECH_WORDS}:
-            score -= 50
-
-    # ----------------------------------
-    # Resume Keywords
-    # ----------------------------------
-
-    for word in words:
-        if word in BAD_WORDS:
-            score -= 25
-
-    # ----------------------------------
-    # ALL CAPS Bonus
-    # Many resumes have uppercase names.
-    # ----------------------------------
-
-    if candidate.isupper():
-        score += 3
-
-    return score
-
-
-def extract_name(text: str) -> str | None:
-
-    header = get_header(text)
-
-    doc = nlp(header)
-
-    candidates = []
-
-    for ent in doc.ents:
-
-        if ent.label_ != "PERSON":
-            continue
-
-        candidate = clean_text(ent.text)
-
-        # Remove locations accidentally attached
-        mini_doc = nlp(candidate)
-
-        person_tokens = []
-
-        for token in mini_doc.ents:
-
-            if token.label_ == "PERSON":
-                person_tokens.append(token.text)
-
-        if person_tokens:
-            candidate = " ".join(person_tokens)
-
-        candidates.append(candidate)
-
-    if not candidates:
-        return None
-
-    best_candidate = None
-    best_score = float("-inf")
-
-    for candidate in candidates:
-
-        score = score_candidate(candidate, header)
-
-        print(f"{candidate} -> {score}")
-
-        if score > best_score:
-            best_score = score
-            best_candidate = candidate
-
-    return best_candidate
+    return sorted(found_skills)

@@ -18,3 +18,8 @@ class ResumeData(BaseModel):
     name: str | None = None
     email: str | None = None
     phone: str | None = None
+
+    skills: list[str] = []
+    education: list[str] = []
+    experience: list[str] = []
+    projects: list[str] = []

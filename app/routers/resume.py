@@ -1,6 +1,8 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+
 from app.services.parser import extract_text_from_pdf
 from app.services.resume_service import extract_resume_information
+
 router = APIRouter()
 
 PDF_CONTENT_TYPE = "application/pdf"
@@ -15,9 +17,8 @@ def resume_upload(file: UploadFile = File(...)):
             )
         extracted_text = extract_text_from_pdf(file.file)
         # print(extracted_text)
-        text = extract_resume_information(extracted_text)
-        # print(text)
-        return text
+        resume = extract_resume_information(extracted_text)
+        return resume
     except HTTPException:
         raise
     except Exception as e:
