@@ -1,59 +1,8 @@
 import re
-import spacy
+from google.genai import types
 
 from app.models import ResumeData
-from app.data.skills import SKILLS
-from app.services.ai_service import extract_resume_with_ai
-
-nlp = spacy.load('en_core_web_sm')
-
-TECH_WORDS = {
-    "RAG",
-    "LLM",
-    "MCP",
-    "LangChain",
-    "LangGraph",
-    "LlamaIndex",
-    "FastAPI",
-    "Python",
-    "Java",
-    "JavaScript",
-    "React",
-    "Node",
-    "NodeJS",
-    "Express",
-    "Docker",
-    "Kubernetes",
-    "TensorFlow",
-    "PyTorch",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Gemini",
-    "ChromaDB",
-    "Redis",
-    "MongoDB",
-    "PostgreSQL",
-    "Git",
-    "REST",
-    "API",
-}
-
-BAD_WORDS = {
-    "Resume",
-    "Curriculum",
-    "Vitae",
-    "CV",
-    "Engineer",
-    "Developer",
-    "Intern",
-    "Manager",
-    "Portfolio",
-    "Github",
-    "GitHub",
-    "LinkedIn",
-    "India",
-}
+from app.core.llm import client
 
 def extract_email(text):
 
@@ -92,14 +41,41 @@ def extract_resume_information(text: str) -> ResumeData:
     projects=ai_resume.projects,
 )
 
-def extract_resume_skills(text: str) -> list[str]:
-    text_lower = text.lower()
 
-    found_skills = []
+def extract_resume_with_ai(text: str)->ResumeData:
+    prompt = f"""
+        Extract structured information from the resume below.
 
-    for skill in SKILLS:
+        Rules:
+        - Extract only information explicitly present in the resume.
+        - Do not invent missing information.
+        - If a scalar field is unavailable, return null.
+        - If a list field has no information, return an empty list.
 
-        if skill.lower() in text_lower:
-            found_skills.append(skill)
+        RESUME:
+        {text}
+        """
+    response = client.models.generate_content(
+        model='gemini-3.1-flash-lite',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type='application/json',
+            response_schema=ResumeData
+        ),
+    )
 
-    return sorted(found_skills)
+    return ResumeData.model_validate_json(
+        response.text
+    )
+
+# def extract_resume_skills(text: str) -> list[str]:
+#     text_lower = text.lower()
+
+#     found_skills = []
+
+#     for skill in SKILLS:
+
+#         if skill.lower() in text_lower:
+#             found_skills.append(skill)
+
+#     return sorted(found_skills)
