@@ -45,3 +45,32 @@ class JobDescription(BaseModel):
     minimum_experience_years: float | None = None
 
     education: str | None = None
+
+class SkillMatch(BaseModel):
+    matched_skills: list[str]
+    missing_skills: list[str]
+
+
+class AnalysisResult(BaseModel):
+    job_title: str | None = None
+
+    matched_required_skills: list[str]
+    missing_required_skills: list[str]
+
+    matched_preferred_skills: list[str]
+    missing_preferred_skills: list[str]
+
+    required_experience_years: float
+    candidate_experience_years: float
+
+    education_match: bool
+
+    relevant_projects: int
+    total_projects: int
+
+    strengths: list[str]
+    weaknesses: list[str]
+    recommendations: list[str]
+
+    experience_match: str
+    education_match_reason: str
